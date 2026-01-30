@@ -6,7 +6,7 @@ const ADMIN_ID = 6076530076;
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
-// ================= SERVER
+// ================= SERVER (KEEP ALIVE)
 const app = express();
 app.get("/", (req, res) => res.send("☠️ DARK AI VIP ONLINE"));
 app.listen(process.env.PORT || 3000);
@@ -15,22 +15,24 @@ app.listen(process.env.PORT || 3000);
 let USERS = {};
 let ALL_USERS = [];
 
-// ================= DAILY ACTIVE
-let DAILY_ACTIVE = new Set();
-let CURRENT_DATE = new Date().toDateString();
-
-// ================= FUNCTIONS
-function trackDailyUser(chatId) {
-  const today = new Date().toDateString();
-  if (today !== CURRENT_DATE) {
-    DAILY_ACTIVE.clear();
-    CURRENT_DATE = today;
-  }
-  DAILY_ACTIVE.add(chatId);
+/*
+VIP_USERS FORMAT
+userId: {
+  type: "lifetime" | "10days",
+  expire: timestamp | null
 }
+*/
 
-// ================= AI TYPING ANIMATION
-async function aiTyping(chatId, text, delay = 25) {
+let VIP_USERS = {
+  [ADMIN_ID]: { type: "lifetime", expire: null }
+};
+
+// ================= CRASH PROTECTION
+process.on("uncaughtException", err => console.log("ERROR:", err));
+process.on("unhandledRejection", err => console.log("PROMISE ERROR:", err));
+
+// ================= AI TYPING EFFECT
+async function aiTyping(chatId, text, delay = 22) {
   await bot.sendChatAction(chatId, "typing");
 
   let msg = "";
@@ -47,11 +49,47 @@ async function aiTyping(chatId, text, delay = 25) {
   }
 }
 
+// ================= VIP CHECK
+function isVIP(userId) {
+  const vip = VIP_USERS[userId];
+  if (!vip) return false;
+
+  if (vip.type === "lifetime") return true;
+
+  if (vip.expire && Date.now() > vip.expire) {
+    delete VIP_USERS[userId];
+    return false;
+  }
+
+  return true;
+}
+
 // ================= START
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
 
   if (!ALL_USERS.includes(chatId)) ALL_USERS.push(chatId);
+
+  if (!isVIP(chatId)) {
+    return bot.sendMessage(
+      chatId,
+`🔒 *VIP ACCESS REQUIRED*
+
+━━━━━━━━━━━━━━
+💎 DARK AI PREMIUM SYSTEM
+
+📅 10 Days VIP → ₹259
+♾ Lifetime VIP → ₹349
+
+🔥 4th Level → *99.9% Prediction*
+
+📩 Buy VIP:
+👉 @willian2500
+
+⚠️ Without VIP bot cannot be used`,
+      { parse_mode: "Markdown" }
+    );
+  }
 
   USERS[chatId] = { step: 1 };
 
@@ -59,76 +97,70 @@ bot.onText(/\/start/, (msg) => {
     chatId,
 `☠️ *DARK AI VIP SYSTEM*
 
-━━━━━━━━━━━━━━
-🤖 Neural Prediction Engine
-📊 Deep Pattern Scan
-⚡ Ultra Premium Mode
-━━━━━━━━━━━━━━
+🤖 Neural Engine Activated
+📊 Premium Prediction Mode
 
-🔢 *Enter last 3 digits*
-Example: \`555\`
-
-⚠️ VIP Interface Activated`,
+🔢 Enter last 3 digits
+Example: \`555\``,
     { parse_mode: "Markdown" }
   );
 });
 
-// ================= VIP COMMAND
-bot.onText(/\/vip/, (msg) => {
-  bot.sendMessage(
-    msg.chat.id,
-`💎 *DARK AI VIP STATUS*
+// ================= ADMIN ADD VIP
+// /addvip userId 10
+// /addvip userId life
 
-━━━━━━━━━━━━━━
-👤 User: VIP
-🧠 Engine: Neural Pro
-📊 Accuracy: 90–99%
-⚡ Speed: Ultra
-🔐 Security: Encrypted
-━━━━━━━━━━━━━━
-
-🔥 Premium AI Activated`,
-    { parse_mode: "Markdown" }
-  );
-});
-
-// ================= ADMIN STATS
-bot.onText(/\/stats/, (msg) => {
+bot.onText(/\/addvip (.+)/, (msg, match) => {
   if (msg.chat.id !== ADMIN_ID) return;
 
-  bot.sendMessage(
-    msg.chat.id,
-`📊 *ADMIN PANEL*
+  const [id, type] = match[1].split(" ");
+  const userId = parseInt(id);
 
-👥 Total Users: ${ALL_USERS.length}
-🔥 Today Active: ${DAILY_ACTIVE.size}
+  if (!userId || !type) {
+    return bot.sendMessage(msg.chat.id, "Usage:\n/addvip userId 10\n/addvip userId life");
+  }
 
-☠️ System: ONLINE`,
-    { parse_mode: "Markdown" }
-  );
+  if (type === "10") {
+    VIP_USERS[userId] = {
+      type: "10days",
+      expire: Date.now() + 10 * 24 * 60 * 60 * 1000
+    };
+    return bot.sendMessage(msg.chat.id, "✅ 10 Days VIP Added");
+  }
+
+  if (type === "life") {
+    VIP_USERS[userId] = {
+      type: "lifetime",
+      expire: null
+    };
+    return bot.sendMessage(msg.chat.id, "♾ Lifetime VIP Added");
+  }
+
+  bot.sendMessage(msg.chat.id, "❌ Type must be 10 or life");
 });
 
-// ================= BROADCAST TEXT
+// ================= TEXT BROADCAST
 bot.onText(/\/broadcast([\s\S]+)/, async (msg, match) => {
   if (msg.chat.id !== ADMIN_ID) return;
 
-  const message = match[1].trim();
-  if (!message) return bot.sendMessage(msg.chat.id, "❌ Write message");
+  const text = match[1].trim();
+  if (!text) return bot.sendMessage(msg.chat.id, "❌ Message likho");
 
   let success = 0, failed = 0;
 
   for (const id of ALL_USERS) {
     try {
-      await bot.sendMessage(id, `📢 *VIP ANNOUNCEMENT*\n\n${message}`, {
-        parse_mode: "Markdown"
-      });
+      await bot.sendMessage(id, text, { parse_mode: "Markdown" });
       success++;
     } catch {
       failed++;
     }
   }
 
-  bot.sendMessage(msg.chat.id, `✅ Broadcast Done\nSent: ${success}\nFailed: ${failed}`);
+  bot.sendMessage(
+    msg.chat.id,
+    `✅ Broadcast Done\nSent: ${success}\nFailed: ${failed}`
+  );
 });
 
 // ================= IMAGE BROADCAST
@@ -144,7 +176,7 @@ bot.on("photo", async (msg) => {
   for (const id of ALL_USERS) {
     try {
       await bot.sendPhoto(id, photoId, {
-        caption: `☠️ *DARK AI VIP ALERT*\n\n${text}`,
+        caption: text || "📢 VIP Announcement",
         parse_mode: "Markdown"
       });
       success++;
@@ -153,37 +185,52 @@ bot.on("photo", async (msg) => {
     }
   }
 
-  bot.sendMessage(msg.chat.id, `🖼 Image Broadcast Done\nSent: ${success}\nFailed: ${failed}`);
+  bot.sendMessage(
+    msg.chat.id,
+    `🖼 Image Broadcast Done\nSent: ${success}\nFailed: ${failed}`
+  );
 });
 
-// ================= AI FLOW
+// ================= MAIN AI FLOW
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
 
-  trackDailyUser(chatId);
-
   if (!USERS[chatId]) return;
   if (!text || text.startsWith("/")) return;
+
+  if (!isVIP(chatId)) {
+    return bot.sendMessage(
+      chatId,
+`🔒 *VIP EXPIRED*
+
+📅 10 Days → ₹259
+♾ Lifetime → ₹349
+
+Admin:
+👉 @willian2500`,
+      { parse_mode: "Markdown" }
+    );
+  }
 
   const user = USERS[chatId];
 
   if (user.step === 1) {
     user.period = text;
     user.step = 2;
-    return bot.sendMessage(chatId, "🔢 *Enter Number (0–9)*", { parse_mode: "Markdown" });
+    return bot.sendMessage(chatId, "🔢 Enter number (0–9)");
   }
 
   if (user.step === 2) {
     user.number = text;
     user.step = 3;
-    return bot.sendMessage(chatId, "📊 *Big or Small*", { parse_mode: "Markdown" });
+    return bot.sendMessage(chatId, "📊 Big or Small?");
   }
 
   if (user.step === 3) {
     user.size = text;
     user.step = 4;
-    return bot.sendMessage(chatId, "🎨 *Color (Red / Green / Violet)*", { parse_mode: "Markdown" });
+    return bot.sendMessage(chatId, "🎨 Color (Red / Green / Violet)");
   }
 
   if (user.step === 4) {
@@ -191,13 +238,13 @@ bot.on("message", async (msg) => {
 
     await bot.sendMessage(
       chatId,
-`🤖 *AI PROCESSING*
+`🤖 *AI ANALYZING...*
 
-🧠 Neural Scan...
-📡 Pattern Matching...
-⚙️ Prediction Engine Loading...
+🧠 Pattern scanning
+📡 Neural calculation
+⚙️ Probability engine
 
-⏳ Please wait...`,
+⏳ Please wait 1–2 seconds`,
       { parse_mode: "Markdown" }
     );
 
@@ -206,25 +253,27 @@ bot.on("message", async (msg) => {
       const size = Math.random() > 0.5 ? "BIG 🔥" : "SMALL ❄️";
       const colors = ["RED 🔴", "GREEN 🟢", "VIOLET 🟣"];
       const color = colors[Math.floor(Math.random() * colors.length)];
-      const conf = Math.floor(80 + Math.random() * 18);
+      const accuracy = Math.floor(91 + Math.random() * 8);
 
       await aiTyping(
         chatId,
-`☠️ *DARK AI VIP RESULT*
+`☠️ *DARK AI PREMIUM RESULT*
 
 ━━━━━━━━━━━━━━
 📌 Period: *${next}*
 🔥 Prediction: *${size}*
 🎨 Color: *${color}*
-🎯 Accuracy: *${conf}%*
+🎯 Accuracy: *${accuracy}%*
 ━━━━━━━━━━━━━━
 
-💎 Neural Engine Active
-⚠️ Play Responsibly`,
+🚀 4th Level AI Engine
+🎯 99.9% Mode Active
+
+⚠️ Play responsibly`,
         22
       );
 
       USERS[chatId] = { step: 1 };
-    }, 2000);
+    }, 1500);
   }
 });
