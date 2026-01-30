@@ -31,24 +31,6 @@ let VIP_USERS = {
 process.on("uncaughtException", err => console.log("ERROR:", err));
 process.on("unhandledRejection", err => console.log("PROMISE ERROR:", err));
 
-// ================= AI TYPING EFFECT
-async function aiTyping(chatId, text, delay = 22) {
-  await bot.sendChatAction(chatId, "typing");
-
-  let msg = "";
-  const sent = await bot.sendMessage(chatId, "‎");
-
-  for (let ch of text) {
-    msg += ch;
-    await bot.editMessageText(msg, {
-      chat_id: chatId,
-      message_id: sent.message_id,
-      parse_mode: "Markdown"
-    });
-    await new Promise(r => setTimeout(r, delay));
-  }
-}
-
 // ================= VIP CHECK
 function isVIP(userId) {
   const vip = VIP_USERS[userId];
@@ -117,7 +99,10 @@ bot.onText(/\/addvip (.+)/, (msg, match) => {
   const userId = parseInt(id);
 
   if (!userId || !type) {
-    return bot.sendMessage(msg.chat.id, "Usage:\n/addvip userId 10\n/addvip userId life");
+    return bot.sendMessage(
+      msg.chat.id,
+      "Usage:\n/addvip userId 10\n/addvip userId life"
+    );
   }
 
   if (type === "10") {
@@ -234,33 +219,31 @@ Admin:
   }
 
   if (user.step === 4) {
-  user.color = text;
+    user.color = text;
 
-  // AI ANALYZING MESSAGE
-  await bot.sendMessage(
-    chatId,
+    await bot.sendMessage(
+      chatId,
 `🤖 *AI ANALYZING...*
 
 🧠 Pattern scanning
 📡 Neural calculation
 ⚙️ Probability engine`,
-    { parse_mode: "Markdown" }
-  );
+      { parse_mode: "Markdown" }
+    );
 
-  // typing animation
-  await bot.sendChatAction(chatId, "typing");
+    await bot.sendChatAction(chatId, "typing");
 
-  setTimeout(async () => {
+    setTimeout(async () => {
 
-    const nextPeriod = parseInt(user.period) + 1;
+      const nextPeriod = parseInt(user.period) + 1;
 
-    const size = Math.random() > 0.5 ? "BIG 🔥" : "SMALL ❄️";
-    const colors = ["RED 🔴", "GREEN 🟢", "VIOLET 🟣"];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const accuracy = Math.floor(90 + Math.random() * 9);
+      const size = Math.random() > 0.5 ? "BIG 🔥" : "SMALL ❄️";
+      const colors = ["RED 🔴", "GREEN 🟢", "VIOLET 🟣"];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const accuracy = Math.floor(90 + Math.random() * 9);
 
-    await bot.sendMessage(
-      chatId,
+      await bot.sendMessage(
+        chatId,
 `✅ *AI RESULT*
 
 ━━━━━━━━━━━━━━
@@ -271,10 +254,11 @@ Admin:
 ━━━━━━━━━━━━━━
 
 💎 DARK AI VIP`,
-      { parse_mode: "Markdown" }
-    );
+        { parse_mode: "Markdown" }
+      );
 
-    USERS[chatId] = { step: 1 };
+      USERS[chatId] = { step: 1 };
 
-  }, 1000); // ⏱️ 1 second delay
-}
+    }, 1000);
+  }
+});
