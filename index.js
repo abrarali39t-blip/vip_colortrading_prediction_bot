@@ -234,46 +234,47 @@ Admin:
   }
 
   if (user.step === 4) {
-    user.color = text;
+  user.color = text;
 
-    await bot.sendMessage(
-      chatId,
+  // AI ANALYZING MESSAGE
+  await bot.sendMessage(
+    chatId,
 `🤖 *AI ANALYZING...*
 
 🧠 Pattern scanning
 📡 Neural calculation
-⚙️ Probability engine
+⚙️ Probability engine`,
+    { parse_mode: "Markdown" }
+  );
 
-⏳ Please wait 1–2 seconds`,
-      { parse_mode: "Markdown" }
-    );
+  // typing animation
+  await bot.sendChatAction(chatId, "typing");
 
-    setTimeout(async () => {
-      const next = parseInt(user.period) + 1;
-      const size = Math.random() > 0.5 ? "BIG 🔥" : "SMALL ❄️";
-      const colors = ["RED 🔴", "GREEN 🟢", "VIOLET 🟣"];
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      const accuracy = Math.floor(91 + Math.random() * 8);
+  setTimeout(async () => {
 
-      await aiTyping(
-        chatId,
-`☠️ *DARK AI PREMIUM RESULT*
+    const nextPeriod = parseInt(user.period) + 1;
+
+    const size = Math.random() > 0.5 ? "BIG 🔥" : "SMALL ❄️";
+    const colors = ["RED 🔴", "GREEN 🟢", "VIOLET 🟣"];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const accuracy = Math.floor(90 + Math.random() * 9);
+
+    await bot.sendMessage(
+      chatId,
+`✅ *AI RESULT*
 
 ━━━━━━━━━━━━━━
-📌 Period: *${next}*
-🔥 Prediction: *${size}*
+📌 Next Period: *${nextPeriod}*
+🔥 Result: *${size}*
 🎨 Color: *${color}*
 🎯 Accuracy: *${accuracy}%*
 ━━━━━━━━━━━━━━
 
-🚀 4th Level AI Engine
-🎯 99.9% Mode Active
+💎 DARK AI VIP`,
+      { parse_mode: "Markdown" }
+    );
 
-⚠️ Play responsibly`,
-        22
-      );
+    USERS[chatId] = { step: 1 };
 
-      USERS[chatId] = { step: 1 };
-    }, 1500);
-  }
-});
+  }, 1000); // ⏱️ 1 second delay
+}
